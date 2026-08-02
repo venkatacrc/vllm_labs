@@ -46,7 +46,7 @@ FAILED=()
 for m in "${MODELS[@]}"; do
   echo ""
   echo "=== Downloading $m ==="
-  if ! "${DL_CMD[@]}" "$m" --exclude "*.pth" "original/*"; then
+  if ! "${DL_CMD[@]}" "$m" --exclude "*.pth" --exclude "original/*"; then
     echo "!!! Failed to download $m (continuing with the rest)"
     FAILED+=("$m")
   fi
