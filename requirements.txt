@@ -1,0 +1,21 @@
+# These labs assume you already have a working vLLM + CUDA environment
+# (matching the versions below is not strictly required, just known-good).
+# Install with: pip install -r requirements.txt
+#
+# On the reference 8xB200 node these were already present in the conda env:
+torch==2.11.0
+transformers==5.14.1
+accelerate==1.14.0
+datasets==5.0.1
+vllm==0.26.0
+
+# Optional but strongly recommended on Blackwell (B200 / SM100):
+#   flash-attn        -> fallback attention backend, used by lab03/lab08
+#   flashinfer-python  -> vLLM's default Blackwell attention backend (lab03/lab08).
+#                         If missing, lab03/lab08 will skip the FlashInfer
+#                         variant and vLLM will silently fall back to FlashAttention.
+# flash-attn==2.8.3.post1
+# flashinfer-python
+
+# Used only by scripts/download_models.sh
+huggingface_hub
