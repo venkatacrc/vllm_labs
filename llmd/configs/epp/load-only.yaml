@@ -1,0 +1,36 @@
+# Ablation: load-aware only (queue depth + KV-cache utilization), no prefix
+# awareness. Behaves like a smart least-loaded balancer.
+apiVersion: llm-d.ai/v1
+kind: EndpointPickerConfig
+
+plugins:
+  - name: file-discovery
+    type: file-discovery
+    parameters:
+      path: /etc/epp/endpoints.yaml
+      watchFile: true
+  - type: queue-scorer
+  - type: kv-cache-utilization-scorer
+
+  - name: metrics-source
+    type: metrics-data-source
+  - name: metrics-extractor
+    type: core-metrics-extractor
+
+schedulingProfiles:
+  - name: default
+    plugins:
+      - pluginRef: queue-scorer
+        weight: 1
+      - pluginRef: kv-cache-utilization-scorer
+        weight: 1
+
+dataLayer:
+  injectDefaults: false
+  discovery:
+    endpoints:
+      pluginRef: file-discovery
+  sources:
+    - pluginRef: metrics-source
+      extractors:
+        - pluginRef: metrics-extractor

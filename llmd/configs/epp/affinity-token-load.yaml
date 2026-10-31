@@ -1,0 +1,41 @@
+# llm-d v1.0 optimized-baseline plugin set (guides/optimized-baseline/router/
+# optimized-baseline.values.yaml) with file discovery instead of an
+# InferencePool. The affinity filter keeps a prefix group on its cache-warm
+# replicas until they saturate (peakPrefillThroughput, calibrated for
+# Qwen3-32B TP=2 on H100 - recalibrate for B200 with
+# guides/recipes/router/calibration), then the token-load scorer picks the
+# replica with the least queued prompt work.
+apiVersion: llm-d.ai/v1
+kind: EndpointPickerConfig
+
+plugins:
+  - name: file-discovery
+    type: file-discovery
+    parameters:
+      path: /etc/epp/endpoints.yaml
+      watchFile: true
+  - type: approx-prefix-cache-producer
+  - type: inflight-load-producer
+  - type: prefix-cache-affinity-filter
+  - type: token-load-scorer
+
+  - name: metrics-source
+    type: metrics-data-source
+  - name: metrics-extractor
+    type: core-metrics-extractor
+
+schedulingProfiles:
+  - name: default
+    plugins:
+      - pluginRef: prefix-cache-affinity-filter
+      - pluginRef: token-load-scorer
+
+dataLayer:
+  injectDefaults: false
+  discovery:
+    endpoints:
+      pluginRef: file-discovery
+  sources:
+    - pluginRef: metrics-source
+      extractors:
+        - pluginRef: metrics-extractor

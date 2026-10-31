@@ -1,0 +1,62 @@
+# Optimized-baseline scorers + Flow Control (guides/flow-control/router/
+# flow-control.values.yaml). Requests are queued in the EPP per flow
+# (fairness id from the x-llm-d-inference-fairness-id header + priority) and
+# only dispatched while the pool is not saturated. maxConcurrency is per
+# replica; lowered from the upstream 132 so saturation is reachable in a lab.
+apiVersion: llm-d.ai/v1
+kind: EndpointPickerConfig
+featureGates:
+  - flowControl
+plugins:
+  - name: file-discovery
+    type: file-discovery
+    parameters:
+      path: /etc/epp/endpoints.yaml
+      watchFile: true
+  - type: queue-scorer
+  - type: kv-cache-utilization-scorer
+  - type: prefix-cache-scorer
+  - type: round-robin-fairness-policy
+  - type: fcfs-ordering-policy
+  - type: concurrency-detector
+    parameters:
+      maxConcurrency: 48
+      concurrencyMode: requests
+      headroom: 0.0
+
+  - name: metrics-source
+    type: metrics-data-source
+  - name: metrics-extractor
+    type: core-metrics-extractor
+
+schedulingProfiles:
+  - name: default
+    plugins:
+      - pluginRef: queue-scorer
+        weight: 2
+      - pluginRef: kv-cache-utilization-scorer
+        weight: 2
+      - pluginRef: prefix-cache-scorer
+        weight: 3
+
+flowControl:
+  maxBytes: "10Gi"
+  maxRequests: "1k"
+  defaultRequestTTL: "120s"
+  saturationDetector:
+    pluginRef: concurrency-detector
+  priorityBands:
+    - priority: 0
+      maxRequests: "1k"
+      fairnessPolicyRef: round-robin-fairness-policy
+      orderingPolicyRef: fcfs-ordering-policy
+
+dataLayer:
+  injectDefaults: false
+  discovery:
+    endpoints:
+      pluginRef: file-discovery
+  sources:
+    - pluginRef: metrics-source
+      extractors:
+        - pluginRef: metrics-extractor
