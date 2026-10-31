@@ -1,0 +1,17 @@
+{
+    "name": "LLM Serving Labs",
+    "short_name": "LLM Labs",
+    "description": "LLM serving course: systems foundations, vLLM, SGLang and llm-d labs, and global cloud deployment.",
+    "start_url": "./",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#f4f5f9",
+    "theme_color": "#4c5fd5",
+    "categories": ["education", "developer"],
+    "icons": [
+        { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+        { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+        { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    ]
+}

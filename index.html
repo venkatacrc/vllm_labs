@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4c5fd5">
+    <meta name="description" content="LLM serving course: GPU and systems foundations, vLLM, SGLang and llm-d labs on 8xB200, and global cloud deployment. Lessons and flash cards, offline.">
+    <title>LLM Serving Labs</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+    <div id="app">
+        <header class="topbar">
+            <button class="icon-btn" id="open-drawer" aria-label="Lessons and options">☰</button>
+            <button class="brand" id="go-home" type="button"><span class="logo">⚡</span> LLM Serving Labs</button>
+        </header>
+        <div class="switches">
+            <div class="segmented" id="mode-switch">
+                <button data-value="read">Read</button>
+                <button data-value="cards">Cards</button>
+            </div>
+            <div class="segmented" id="study-switch">
+                <button data-value="learn">Learn</button>
+                <button data-value="test">Test</button>
+            </div>
+        </div>
+        <div class="status" id="status"></div>
+        <main id="stage"></main>
+        <nav class="actions" id="actions"></nav>
+    </div>
+
+    <div class="backdrop" id="backdrop" hidden></div>
+    <aside class="drawer" id="drawer" aria-hidden="true">
+        <div class="drawer-head">
+            <div class="brand"><span class="logo">⚡</span> LLM Serving Labs</div>
+            <button class="icon-btn" id="close-drawer" aria-label="Close">✕</button>
+        </div>
+        <div class="drawer-body" id="drawer-body"></div>
+        <div class="drawer-foot" id="drawer-foot"></div>
+    </aside>
+
+    <script src="app.js"></script>
+</body>
+</html>
