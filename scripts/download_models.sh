@@ -37,6 +37,7 @@ fi
 MODELS=(
   "meta-llama/Llama-3.1-8B-Instruct"
   "meta-llama/Llama-3.2-1B-Instruct"
+  "RedHatAI/Llama-3.1-8B-Instruct-speculator.eagle3"
   "Qwen/Qwen2.5-32B-Instruct"
   "hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4"
   "hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4"

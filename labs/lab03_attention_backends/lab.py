@@ -18,7 +18,16 @@ from common import bench, cli, config, gpu_utils, report, server  # noqa: E402
 
 LAB_NAME = "lab03_attention_backends"
 
-BACKENDS = ["FLASHINFER", "FLASH_ATTN", "TRITON_ATTN", "FLEX_ATTENTION"]
+# (label, CLI args). `--attention-backend` replaced the VLLM_ATTENTION_BACKEND
+# env var; FlashAttention's version is selected through --attention-config
+# (FA4 is the default on SM100/Blackwell, FA3 on Hopper, FA2 elsewhere).
+BACKENDS = [
+    ("FLASHINFER", ["--attention-backend", "FLASHINFER"]),
+    ("FLASH_ATTN_FA4", ["--attention-config", '{"backend": "FLASH_ATTN", "flash_attn_version": 4}']),
+    ("FLASH_ATTN_FA2", ["--attention-config", '{"backend": "FLASH_ATTN", "flash_attn_version": 2}']),
+    ("TRITON_ATTN", ["--attention-backend", "TRITON_ATTN"]),
+    ("FLEX_ATTENTION", ["--attention-backend", "FLEX_ATTENTION"]),
+]
 
 PREFILL_INPUT_LEN = 4000
 PREFILL_OUTPUT_LEN = 32
@@ -42,19 +51,19 @@ def run(quick: bool = False, gpus: str | None = None) -> list[dict]:
     rows: list[dict] = []
     skip_notes: list[str] = []
 
-    for backend in BACKENDS:
+    for backend, backend_args in BACKENDS:
         gpu_utils.print_snapshot(f"lab03 before {backend}")
         extra_args = [
             "--dtype", "bfloat16",
             "--gpu-memory-utilization", str(config.DEFAULT_GPU_MEMORY_UTILIZATION),
             "--max-model-len", str(MAX_MODEL_LEN),
+            *backend_args,
         ]
         try:
             with server.VLLMServer(
                 config.MODEL_PRIMARY,
                 gpus=gpus,
                 extra_args=extra_args,
-                env={"VLLM_ATTENTION_BACKEND": backend},
                 name=f"lab03_{backend}",
             ) as base_url:
                 r_prefill = bench.run_benchmark(

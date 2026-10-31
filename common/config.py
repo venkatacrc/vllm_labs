@@ -26,13 +26,15 @@ MODEL_LARGE = os.environ.get("LAB_MODEL_LARGE", "Qwen/Qwen2.5-32B-Instruct")
 
 # Small draft model for speculative decoding.
 MODEL_DRAFT = os.environ.get("LAB_MODEL_DRAFT", "meta-llama/Llama-3.2-1B-Instruct")
+# EAGLE-3 speculator head trained against Llama-3.1-8B-Instruct's hidden states.
+MODEL_EAGLE3 = os.environ.get("LAB_MODEL_EAGLE3", "RedHatAI/Llama-3.1-8B-Instruct-speculator.eagle3")
 
 # Pre-quantized checkpoints for the weight-quantization lab (no local
 # calibration/quantization step needed).
 MODEL_AWQ = os.environ.get("LAB_MODEL_AWQ", "hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4")
 MODEL_GPTQ = os.environ.get("LAB_MODEL_GPTQ", "hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4")
 
-ALL_MODELS = [MODEL_PRIMARY, MODEL_LARGE, MODEL_DRAFT, MODEL_AWQ, MODEL_GPTQ]
+ALL_MODELS = [MODEL_PRIMARY, MODEL_LARGE, MODEL_DRAFT, MODEL_EAGLE3, MODEL_AWQ, MODEL_GPTQ]
 
 # ---------------------------------------------------------------------------
 # Paths / environment

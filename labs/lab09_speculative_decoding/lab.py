@@ -27,7 +27,12 @@ HIGH_NUM_PROMPTS_FULL = 100
 HIGH_NUM_PROMPTS_QUICK = 20
 HIGH_MAX_CONCURRENCY = 64
 
-DRAFT_SPEC_CONFIG = json.dumps({"model": config.MODEL_DRAFT, "num_speculative_tokens": 5})
+DRAFT_SPEC_CONFIG = json.dumps(
+    {"method": "draft_model", "model": config.MODEL_DRAFT, "num_speculative_tokens": 5}
+)
+EAGLE3_SPEC_CONFIG = json.dumps(
+    {"method": "eagle3", "model": config.MODEL_EAGLE3, "num_speculative_tokens": 3}
+)
 NGRAM_SPEC_CONFIG = json.dumps(
     {"method": "ngram", "num_speculative_tokens": 5, "prompt_lookup_max": 4, "prompt_lookup_min": 2}
 )
@@ -35,6 +40,7 @@ NGRAM_SPEC_CONFIG = json.dumps(
 VARIANTS = [
     ("no_spec", []),
     ("draft_model_spec", ["--speculative-config", DRAFT_SPEC_CONFIG]),
+    ("eagle3_spec", ["--speculative-config", EAGLE3_SPEC_CONFIG]),
     ("ngram_spec", ["--speculative-config", NGRAM_SPEC_CONFIG]),
 ]
 

@@ -21,14 +21,26 @@ native FP8 (and NVFP4) support - so FP8 here isn't just "smaller", it's
 running through hardware-accelerated kernels rather than a generic
 quantize/dequantize fallback.
 
+### Online quantization schemes (current vLLM)
+
+| Scheme | Weights | Activations | Notes |
+|---|---|---|---|
+| `fp8_per_tensor` | FP8 E4M3, one FP32 scale per tensor | FP8, per-tensor (per-token on some GPUs) | Simplest; what `--quantization fp8` used to mean. |
+| `fp8_per_block` | FP8, one scale per 128x128 block | FP8, one scale per 1x128 block | DeepSeek-style; more robust to outliers. |
+| `mxfp8` | FP8 E4M3 + E8M0 scale per 1x32 block | same | OCP microscaling; native w8a8 on SM100+. |
+| `mxfp4` | FP4 E2M1 + E8M0 scale per 1x32 block | backend-dependent (FP4 or BF16) | Quarter of BF16 weight memory; accuracy cost is higher. |
+
 ## What this lab does
 
-Serves three configurations of the primary model:
+Serves the primary model as:
 
 1. BF16 (reused from Lab 01 if available).
-2. `--quantization fp8` (FP8 weights, BF16 KV cache).
-3. `--quantization fp8 --kv-cache-dtype fp8_e4m3` (FP8 weights **and** KV
+2. `fp8_per_tensor`, `fp8_per_block`, `mxfp8`, `mxfp4` (quantized weights,
+   BF16 KV cache).
+3. `fp8_per_tensor` + `--kv-cache-dtype fp8_e4m3` (FP8 weights **and** KV
    cache).
+
+Any scheme your installed vLLM doesn't recognise is reported as skipped.
 
 ## Run it
 

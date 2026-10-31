@@ -15,9 +15,16 @@ from labs.lab00_fp32_baseline.lab import RANDOM_INPUT_LEN, RANDOM_OUTPUT_LEN  # 
 
 LAB_NAME = "lab08_fp8_quantization"
 
+# Online (load-time) quantization schemes; no calibration or pre-quantized
+# checkpoint needed. mxfp8/mxfp4 are OCP microscaling formats with native
+# w8a8 / fp4 tensor-core paths on SM100 (Blackwell).
 VARIANTS = [
-    ("fp8_weights", ["--quantization", "fp8"]),
-    ("fp8_weights_and_kv", ["--quantization", "fp8", "--kv-cache-dtype", "fp8_e4m3"]),
+    ("fp8_dynamic", ["--quantization", "fp8"]),
+    ("fp8_per_tensor", ["--quantization", "fp8_per_tensor"]),
+    ("fp8_per_block", ["--quantization", "fp8_per_block"]),
+    ("mxfp8", ["--quantization", "mxfp8"]),
+    ("mxfp4", ["--quantization", "mxfp4"]),
+    ("fp8_weights_and_kv", ["--quantization", "fp8_per_tensor", "--kv-cache-dtype", "fp8_e4m3"]),
 ]
 
 
@@ -55,8 +62,15 @@ def run(quick: bool = False, gpus: str | None = None) -> list[dict]:
     else:
         rows.append(_run_variant("bfloat16", ["--dtype", "bfloat16"], gpus, n_prompts))
 
+    skip_notes: list[str] = []
     for label, extra_args in VARIANTS:
-        rows.append(_run_variant(label, extra_args, gpus, n_prompts))
+        try:
+            rows.append(_run_variant(label, extra_args, gpus, n_prompts))
+        except server.ServerStartError as exc:
+            reason = str(exc).splitlines()[0]
+            print(f"[lab08] SKIPPING variant={label}: {reason}")
+            rows.append({"label": label, "skipped": True})
+            skip_notes.append(f"{label}: {reason}")
 
     baseline_label = rows[0]["label"]
     rows = report.add_speedup(rows, baseline_label=baseline_label)
@@ -68,8 +82,9 @@ def run(quick: bool = False, gpus: str | None = None) -> list[dict]:
         "Lab 08: FP8 quantization (weights and KV cache)",
         table,
         notes=(
-            "FP8 weights are quantized dynamically at load time (no calibration step needed). "
+            "All schemes quantize BF16 weights at load time (no calibration step needed). "
             "fp8_weights_and_kv additionally halves KV-cache bytes/token."
+            + ("\n\nSkipped variants:\n" + "\n".join(f"- {n}" for n in skip_notes) if skip_notes else "")
         ),
     )
     return rows

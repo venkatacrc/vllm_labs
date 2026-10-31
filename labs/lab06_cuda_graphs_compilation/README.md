@@ -7,23 +7,41 @@ CUDA kernels. At small batch sizes (the common case for low-latency,
 low-concurrency decode), the CPU-side overhead of *launching* those kernels
 can rival or exceed the GPU time actually spent computing them.
 
-**CUDA graphs** let you capture a fixed sequence of kernel launches once
-and replay the whole graph with a single call, eliminating per-kernel
-launch overhead. vLLM captures CUDA graphs for its decode step shapes by
-default. **`--enforce-eager`** disables this, falling back to normal
-PyTorch eager-mode execution (one Python-dispatched kernel launch at a
-time) - useful for debugging, much slower for small-batch decode.
+**CUDA graphs** capture a fixed sequence of kernel launches once and replay
+the whole graph with a single call, eliminating per-kernel launch overhead.
+vLLM also runs `torch.compile` over the model to fuse ops (e.g. RMSNorm +
+quant, SiLU-mul + quant, allreduce + RMSNorm) before graph capture.
 
-vLLM also uses `torch.compile` (piecewise compilation around the CUDA
-graph regions) to fuse/optimize the surrounding non-graphed ops. This lab's
-third variant attempts a more aggressive `--compilation-config` level; if
-your vLLM build's exact compilation-config schema differs, that variant is
-skipped gracefully rather than failing the lab.
+### Optimization levels (current vLLM)
+
+| Flag | What you get |
+|---|---|
+| `--enforce-eager` | No compilation and no CUDA graphs. Fastest startup, slowest decode. |
+| `-O0` | No optimizations. |
+| `-O1` | Fast compilation and simple fusions, `PIECEWISE` CUDA graphs. |
+| `-O2` (default) | More compile ranges and fusions, `FULL_AND_PIECEWISE` CUDA graphs. |
+| `-O3` | Aggressive; currently equal to `-O2`. |
+
+The CUDA graph mode is the single knob in
+`--compilation-config '{"cudagraph_mode": "..."}'`, one of `NONE`,
+`PIECEWISE`, `FULL`, `FULL_DECODE_ONLY`, `FULL_AND_PIECEWISE`:
+
+- `PIECEWISE` graphs everything *except* attention (attention runs eagerly
+  between graph pieces) - works with every attention backend.
+- `FULL` graphs the whole forward pass including attention - needs the
+  attention backend to support graph capture.
+- `FULL_AND_PIECEWISE` uses full graphs for uniform decode batches and
+  piecewise graphs for mixed prefill+decode batches (the default).
+- `FULL_DECODE_ONLY` uses full graphs for decode, eager for mixed batches -
+  less memory spent on captured graphs, useful with P/D disaggregation.
+
+(The old `{"level": 3}` compilation-config key has been replaced by
+`-O<n>` / `"mode"`.)
 
 ## What this lab does
 
-Compares `--enforce-eager` vs the default (CUDA graphs + compilation) at
-two concurrency levels:
+Runs five variants (`--enforce-eager`, `-O0`, `-O1`, `-O2`, and `-O2` with
+`FULL_DECODE_ONLY`) at two concurrency levels:
 
 - **Low concurrency** (`max-concurrency=1`): isolates per-token decode
   latency, where CUDA graphs matter most.
@@ -39,11 +57,11 @@ python labs/lab06_cuda_graphs_compilation/lab.py --quick
 
 ## What to look for
 
-- `eager_low` vs `cudagraph_default_low`: `mean_tpot_ms` should be
-  noticeably higher (worse) under `--enforce-eager`.
-- `eager_high` vs `cudagraph_default_high`: the gap should be smaller than
-  in the low-concurrency case - CUDA graphs help most when GPU work per
-  step is small relative to launch overhead.
-- Startup time in the server log: CUDA graph capture adds to server startup
-  time (it has to capture graphs for a range of batch sizes) - that's the
-  tradeoff for faster steady-state decode.
+- `eager_low` vs `O2_default_low`: `mean_tpot_ms` should be noticeably
+  higher (worse) under `--enforce-eager`.
+- `O1_piecewise` vs `O2_default`: the extra gain from capturing attention
+  inside full graphs.
+- The `_high` runs: the gaps shrink as each step does more GPU work.
+- Startup time in `results/logs/lab06_*.log`: compilation and graph capture
+  add tens of seconds (cached under `~/.cache/vllm/torch_compile_cache` on
+  later runs) - the tradeoff for faster steady-state decode.

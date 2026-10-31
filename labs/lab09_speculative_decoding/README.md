@@ -13,12 +13,18 @@ well, at zero cost in output distribution (the outputs are mathematically
 identical to standard decoding, provided the acceptance rule is used
 correctly).
 
-Two proposer strategies compared here:
+Three proposer strategies compared here, all configured through
+`--speculative-config '{"method": ..., ...}'`:
 
-- **Draft-model speculation**: a small, fast model (`Llama-3.2-1B-Instruct`)
-  proposes tokens for the large target model (`Llama-3.1-8B-Instruct`) to
-  verify. Works well when the draft model's outputs correlate well with the
-  target's.
+- **Draft-model speculation** (`"method": "draft_model"`): a small, fast
+  model (`Llama-3.2-1B-Instruct`) proposes tokens for the target model
+  (`Llama-3.1-8B-Instruct`) to verify. Works well when the draft model's
+  outputs correlate well with the target's.
+- **EAGLE-3** (`"method": "eagle3"`): instead of a separate LM, a tiny
+  one-layer head (`RedHatAI/Llama-3.1-8B-Instruct-speculator.eagle3`) reads
+  the target model's own hidden states (from low, middle and high layers)
+  and predicts the next few tokens. Much cheaper than a draft LM and usually
+  the best acceptance rate - this is what production deployments use today.
 - **N-gram / prompt-lookup speculation**: no draft model at all - propose
   tokens by looking for repeated n-grams earlier in the prompt/generation
   so far. Free to run, and surprisingly effective for tasks with a lot of
@@ -35,7 +41,7 @@ waste) can make speculative decoding neutral or even a net throughput
 
 ## What this lab does
 
-Three variants (no speculation baseline, draft-model, n-gram), each
+Four variants (no speculation baseline, draft-model, EAGLE-3, n-gram), each
 benchmarked at:
 
 - **Low concurrency** (`max-concurrency=2`): the latency-sensitive regime
@@ -57,6 +63,13 @@ python labs/lab09_speculative_decoding/lab.py --quick
   speculation is accepted often.
 - The same comparison at `_high`: the gap should be much smaller, or even
   favor `no_spec`.
+- vLLM logs speculative acceptance metrics (mean acceptance length,
+  per-position acceptance rate) in the server log and on `/metrics`
+  (`vllm:spec_decode_*`) - compare EAGLE-3 vs the draft model there.
+- Beyond this lab, upstream also has MTP heads (for models trained with
+  multi-token prediction such as DeepSeek-V3), suffix decoding, and
+  *dynamic* speculation (`num_speculative_tokens_per_batch_size`) that
+  shrinks `k` as concurrency grows.
 - `ngram_spec` works with zero extra model-loading cost - worth comparing
   its win rate against the draft-model approach on this specific synthetic
   (random-token) workload, which has little natural repetition, so

@@ -26,10 +26,14 @@ HIGH_NUM_PROMPTS_FULL = 128
 HIGH_NUM_PROMPTS_QUICK = 24
 HIGH_MAX_CONCURRENCY = 64
 
+# vLLM optimization levels: -O0 none, -O1 fast fusions + PIECEWISE cudagraphs,
+# -O2 (default) more fusions + FULL_AND_PIECEWISE cudagraphs, -O3 aggressive.
 VARIANTS = [
     ("eager", ["--enforce-eager"]),
-    ("cudagraph_default", []),
-    ("cudagraph_max_compile", ["--compilation-config", '{"level": 3}']),
+    ("O0_no_opt", ["-O0"]),
+    ("O1_piecewise", ["-O1"]),
+    ("O2_default", ["-O2"]),
+    ("O2_full_decode_only", ["-O2", "--compilation-config", '{"cudagraph_mode": "FULL_DECODE_ONLY"}']),
 ]
 
 
