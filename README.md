@@ -1,136 +1,70 @@
-# vLLM Optimization Labs
+# LLM Serving Labs
 
-Twelve self-contained labs that take a base **FP32** model and progressively
-apply the major serving optimizations available in vLLM, on an 8xB200 node -
-ending with a capstone that shows the full fp32-to-fully-optimized speedup.
+A hands-on course that takes you from a naive FP32 model in a Python loop to
+a globally deployed, autoscaled, multi-tenant LLM service, built for a single
+8x NVIDIA B200 node.
 
-Every lab launches a real `vllm serve` process, drives it with `vllm bench
-serve`, tears it down, and saves its results - no notebooks, no mocked
-timings. Each lab is runnable on its own, and `run_all_labs.py` runs the
-whole curriculum end to end and builds a consolidated report.
+**Read it as an app:** [venkatacrc.github.io/vllm_labs](https://venkatacrc.github.io/vllm_labs/)
+(installable on Android/Pixel, works offline) or build the Mac app below.
+Every concept module and lab README is a lesson, with flash cards to learn
+and test yourself.
 
-## Prerequisites
+## What's inside
 
-- 8x NVIDIA B200 (this was built/tuned against `nvidia-smi` reporting
-  `sm_100`, 178GB/GPU - fewer GPUs work for every lab except Lab 10).
-- A working vLLM + CUDA environment. Known-good versions (see
-  [requirements.txt](requirements.txt)): `vllm==0.26.0`, `torch==2.11.0`,
-  `transformers==5.14.1`.
-- `HF_HOME` pointed at fast, large local storage (labs assume
-  `/raid/llm_rl_cache/hf_home`, override with the `HF_HOME` env var).
-- An `HF_TOKEN` with access to the gated `meta-llama/*` repos (accept the
-  license on the model pages first).
-- Optional but recommended on Blackwell: `flashinfer-python` (vLLM's
-  default attention backend on B200 - Lab 03 and Lab 08 skip the FlashInfer
-  variant gracefully if it's missing, but you'll want it for realistic
-  numbers).
+| Track | Where | What you do |
+|---|---|---|
+| Foundations | [`course/foundations/`](course/foundations/) | GPU architecture, transformer inference and the KV cache, interconnects and parallelism, CUDA execution, number formats, serving APIs, containers and Kubernetes, performance metrics |
+| vLLM labs (12) | [`labs/`](labs/) | FP32 baseline → BF16 → continuous batching and paged KV → attention backends (FA4, FlashInfer, Triton, Flex) → prefix caching → chunked prefill → CUDA graphs and `-O` levels → AWQ/GPTQ → FP8/MXFP8/MXFP4 → speculative decoding (draft, EAGLE-3, n-gram) → tensor parallelism → capstone |
+| SGLang labs (14) | [`sglang/`](sglang/) | The same journey in SGLang plus RadixAttention, the overlap scheduler, structured output, MoE expert parallelism, attention backends and HiCache |
+| llm-d labs (10) | [`llmd/`](llmd/) | Inference-aware routing (Envoy + EPP), scorer ablation, flow control, tiered KV cache, prefill/decode disaggregation, wide expert parallelism, then the upstream Kubernetes guides and autoscaling |
+| Cloud & global | [`course/cloud/`](course/cloud/) | Regions, DNS and anycast, edge and gateways, capacity and cost, reliability, security and multi-tenancy |
+| How it fits together | [`course/systems/`](course/systems/) | One request's life from DNS to GPU, a reference architecture, and a symptom-to-fix optimization playbook |
 
-## Quickstart
+Start with [`course/00_start_here.md`](course/00_start_here.md) for the
+suggested order.
+
+## Running the labs
 
 ```bash
-# 1. Check your environment is ready
-python scripts/check_env.py
-
-# 2. Pre-fetch every model used by the labs (avoids downloads mid-benchmark)
-export HF_TOKEN=hf_...
-bash scripts/download_models.sh
-
-# 3. Run everything
-python run_all_labs.py
-
-# ...or just smoke-test the whole suite quickly first
-python run_all_labs.py --quick
-
-# ...or run one lab standalone
-python labs/lab04_prefix_caching/lab.py
+./run_course.sh --list          # show tracks
+./run_course.sh vllm            # python run_all_labs.py   (see labs/README.md)
+./run_course.sh sglang          # sglang/run_all_labs.sh    (see sglang/README.md)
+./run_course.sh llmd            # llmd/run_all_labs.sh      (see llmd/README.md)
+./run_course.sh                 # all three tracks, in order
 ```
 
-Results land in `results/`: each lab writes `results/<lab_name>/results.json`,
-and every lab appends a section to `results/SUMMARY.md`, which becomes the
-one-page report of the whole fp32 -> optimized journey once you've run
-everything (Lab 11 adds the final rollup).
+Each track has its own prerequisites (a vLLM conda env, an isolated
+`sglang-labs` env, Docker and optionally minikube for llm-d); read the track
+README first. Every lab is self-contained: one README, one runnable script,
+results written under `results/`.
 
-## The labs
+## The apps
 
-| # | Lab | What it teaches | GPUs |
-|---|---|---|---|
-| 00 | [FP32 baseline](labs/lab00_fp32_baseline/) | Reference point every other lab compares against | 1 |
-| 01 | [Precision (fp32 -> fp16/bf16)](labs/lab01_precision_bf16_fp16/) | The single biggest, lowest-risk win | 1 |
-| 02 | [Continuous batching + paged KV cache](labs/lab02_continuous_batching_paged_kv_cache/) | Naive HF static batching vs vLLM's scheduler | 1 |
-| 03 | [High-efficiency attention backends](labs/lab03_attention_backends/) | FlashInfer vs FlashAttention vs Triton vs FlexAttention | 1 |
-| 04 | [Automatic prefix caching](labs/lab04_prefix_caching/) | Reusing KV cache across requests with shared prefixes | 1 |
-| 05 | [Chunked prefill](labs/lab05_chunked_prefill/) | Keeping short requests responsive alongside long ones | 1 |
-| 06 | [CUDA graphs / compilation](labs/lab06_cuda_graphs_compilation/) | Kernel-launch overhead at small batch sizes | 1 |
-| 07 | [Weight quantization (AWQ / GPTQ)](labs/lab07_weight_quantization_awq_gptq/) | INT4 checkpoints, memory vs throughput | 1 |
-| 08 | [FP8 quantization (Blackwell-native)](labs/lab08_fp8_quantization/) | Dynamic FP8 weights + KV cache, no calibration needed | 1 |
-| 09 | [Speculative decoding](labs/lab09_speculative_decoding/) | Draft-model and n-gram proposers, latency vs throughput regime | 1-2 |
-| 10 | [Tensor parallelism](labs/lab10_tensor_parallelism/) | Scaling a 32B model across TP=1/2/4/8 | up to 8 |
-| 11 | [Capstone: full stack](labs/lab11_capstone_full_stack/) | The complete fp32 -> optimized journey, both models | up to 4 |
+The course content is plain Markdown. `tools/build_course.py` turns the
+modules and every lab README into `web/course.json` (pre-rendered lessons
+plus flash cards: modules carry `Q:`/`A:` pairs under `## Flashcards`; each
+lab gets cards from its concept and "what to look for" sections).
 
-See [`AGENTS.md`-style detail in each lab's own README](labs/) for the
-concept explanation, exact experiment, and what to look for in the results.
+- **Web app / PWA** (`web/`): open the GitHub Pages URL on your phone and
+  choose *Add to Home screen*. Read mode for lessons, Cards mode with
+  Learn/Test, Known/Review marks, swipe between cards, search, offline cache.
+  Try it locally with `python3 tools/build_course.py && python3 -m http.server -d web`.
+- **Mac app** (`app/`, SwiftUI, macOS 14+): `scripts/build_app.sh` builds
+  `build/LLMServingLabs.app` with the course bundled.
+- **Publishing**: `scripts/publish_web.sh` rebuilds the course and pushes
+  `web/` to the `gh-pages` branch.
 
-### Why 12 labs instead of a single "PagedAttention" lab?
+## Repository layout
 
-If you've read that PagedAttention is deprecated - you read correctly.
-vLLM v0.25.0 (July 2026) deleted the original 2023 standalone PagedAttention
-kernel. The *technique* (paged, block-based KV cache management) didn't go
-away: it's now built into every modern attention backend (FlashInfer,
-FlashAttention, Triton, FlexAttention) under Model Runner V2, which has been
-the default execution path for a while. Lab 02 teaches the underlying
-concept; Lab 03 is a dedicated shootout between the backends that now carry
-it, including the FlashInfer `trtllm-gen` path B200 uses by default.
-
-## How the suite is wired
-
-- `common/config.py` - every model ID, path, and default lives here.
-  Override any of it via environment variables without touching code
-  (e.g. `LAB_MODEL_PRIMARY=some/other-model`).
-- `common/server.py` - starts/stops a `vllm serve` subprocess, polls
-  `/health`, and guarantees teardown (SIGTERM then SIGKILL, process-group
-  wide) so GPU memory is actually free before the next lab starts.
-- `common/bench.py` - wraps `vllm bench serve`, parses its JSON result file,
-  and can fire multiple benchmark workloads concurrently at the same server
-  (used by Lab 05's mixed-traffic simulation).
-- `common/report.py` - console tables, speedup-vs-baseline columns, and the
-  `results/SUMMARY.md` rollup.
-- `common/hf_baseline.py` - the deliberately naive HF `transformers.generate()`
-  static-batching baseline used only by Lab 02, run in an isolated
-  subprocess.
-- Every `labs/<name>/lab.py` exposes `run(quick: bool, gpus: str | None)` and
-  a standalone CLI (`--quick`, `--gpus`), so `run_all_labs.py` and direct
-  invocation share the exact same code path.
-
-## `run_all_labs.py` options
-
-```bash
-python run_all_labs.py --list              # show the lab order and exit
-python run_all_labs.py --labs 0,1,3        # run a subset
-python run_all_labs.py --quick             # shrink every workload for a fast smoke test
-python run_all_labs.py --gpus 1            # override the default single GPU used by most labs
-python run_all_labs.py --skip-download     # suppress the download reminder
 ```
-
-A single failing lab doesn't stop the suite - `run_all_labs.py` logs the
-failure, moves on, and reports every failure at the end.
-
-## Notes on runtime
-
-A full (non `--quick`) run of the entire suite involves ~30+ server
-start/stop cycles (several of them loading a 32B model across multiple
-GPUs), so budget a few hours for `python run_all_labs.py` end to end,
-depending on model download state and disk speed. `--quick` shrinks every
-workload for a fast correctness smoke test (tens of minutes), not for
-numbers you should trust.
-
-## Customizing
-
-Nothing here is hardcoded beyond `common/config.py`. Swap in different
-models, ports, or GPU defaults via the environment variables documented at
-the top of that file, e.g.:
-
-```bash
-export LAB_MODEL_PRIMARY=Qwen/Qwen2.5-7B-Instruct
-export LAB_DEFAULT_GPU=2
-python run_all_labs.py --labs 0,1
+course/          concept modules (foundations, cloud, systems) with flash cards
+labs/            vLLM track (Python labs, run_all_labs.py at repo root)
+common/          shared Python helpers for the vLLM track
+sglang/          SGLang track (bash labs + common/)
+llmd/            llm-d track (Docker no-k8s labs 01-06, Kubernetes labs 07-09)
+tools/           build_course.py
+web/             PWA (index.html, app.js, app.css, sw.js, course.json, icons)
+app/             SwiftUI Mac app
+scripts/         check_env.py, download_models.sh, build_app.sh, make_icon.swift, publish_web.sh
+run_course.sh    runs one or all lab tracks
 ```

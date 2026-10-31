@@ -4,3 +4,14 @@ __pycache__/
 .ipynb_checkpoints/
 *.egg-info/
 .env
+.DS_Store
+
+# llm-d upstream checkout made by llmd/lab00_setup
+llmd/.upstream/
+
+# Mac app build output
+build/
+app/.build/
+app/.swiftpm/
+
+.wibey-tasks/
